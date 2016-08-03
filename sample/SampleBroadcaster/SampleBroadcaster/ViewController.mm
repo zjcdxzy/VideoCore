@@ -44,7 +44,7 @@
     [[NSUserDefaults standardUserDefaults] setValue:@"name_preference" forKey:@"test"];
 
 
-    _session = [[VCSimpleSession alloc] initWithVideoSize:rect.size frameRate:30 bitrate:1000000 useInterfaceOrientation:YES];
+    _session = [[VCSimpleSession alloc] initWithVideoSize:rect.size frameRate:30 bitrate:1000000 useInterfaceOrientation:YES cameraState:VCCameraStateFront];
 //    _session.orientationLocked = YES;
     [self.previewView addSubview:_session.previewView];
     _session.previewView.frame = self.previewView.bounds;
@@ -72,7 +72,8 @@
         case VCSessionStatePreviewStarted:
         case VCSessionStateEnded:
         case VCSessionStateError:
-            [_session startRtmpSessionWithURL:@"rtmp://192.168.50.19/myapp" andStreamKey:@"iosstream?abc=xxx"];
+            // rtmp://w.gslb.lecloud.com/live/2016080230000038j99
+            [_session startRtmpSessionWithURL:@"rtmp://w.gslb.lecloud.com/live" andStreamKey:@"2016080230000038j99"];
             break;
         default:
             [_session endRtmpSession];

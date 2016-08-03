@@ -57,7 +57,22 @@ typedef double CFSwappedFloat64;
 
 #endif
 
-
+/*
+ 
+ 0 = Number type
+ 1 = Boolean type
+ 2 = String type
+ 3 = Object type
+ 4 = MovieClip type
+ 5 = Null type
+ 6 = Undefined type
+ 7 = Reference type
+ 8 = ECMA array type
+ 10 = Strict array type
+ 11 = Date type
+ 12 = Long string type
+ 
+ */
 
 typedef enum
 { kAMFNumber = 0,
