@@ -6,3 +6,4 @@ source 'https://github.com/CocoaPods/Specs.git'
 # Once the pod has been released, use a version number here instead of a path.
 #pod 'VideoCore', '~>0.3.2'
 pod 'VideoCore', path: '../..'
+pod 'librtmp-iOS'

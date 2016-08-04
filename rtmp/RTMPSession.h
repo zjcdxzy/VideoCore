@@ -45,6 +45,9 @@
 #include <videocore/system/PreBuffer.hpp>
 #include <videocore/transforms/IOutputSession.hpp>
 
+//  add support for  librtmp
+#include <librtmp-iOS/rtmp.h>
+
 namespace videocore
 {
     class RTMPSession;
