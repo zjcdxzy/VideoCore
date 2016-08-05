@@ -38,6 +38,34 @@
 #include <algorithm>
 #include <sstream>
 
+#define RTMP_RECEIVE_TIMEOUT    2
+#define DATA_ITEMS_MAX_COUNT 100
+#define RTMP_DATA_RESERVE_SIZE 400
+#define RTMP_HEAD_SIZE (sizeof(RTMPPacket) + RTMP_MAX_HEADER_SIZE)
+
+#define SAVC(x)    static const AVal av_ ## x = AVC(#x)
+
+static const AVal av_setDataFrame = AVC("@setDataFrame");
+static const AVal av_SDKVersion = AVC("ZJCTEST 1.0.0");
+SAVC(onMetaData);
+SAVC(duration);
+SAVC(width);
+SAVC(height);
+SAVC(videocodecid);
+SAVC(videodatarate);
+SAVC(framerate);
+SAVC(audiocodecid);
+SAVC(audiodatarate);
+SAVC(audiosamplerate);
+SAVC(audiosamplesize);
+SAVC(audiochannels);
+SAVC(stereo);
+SAVC(encoder);
+SAVC(av_stereo);
+SAVC(fileSize);
+SAVC(avc1);
+SAVC(mp4a);
+
 
 namespace videocore
 {
@@ -92,6 +120,32 @@ namespace videocore
         m_playPath.pop_back();
         
         connectServer();
+        
+        /*libRTMP Support */
+        _libRtmp = RTMP_Alloc();            // 1. RTMP_Alloc
+        RTMP_Init(_libRtmp);                // 2. RTMP_Init
+        
+        if (RTMP_SetupURL(_libRtmp, (char *)uri.c_str()) ==  FALSE) { //  3.
+            std::cout << "RTMP_SetURL() failed!"<< std::endl;
+            setClientState(kClientStateNone);
+            return;
+        }
+        
+        RTMP_EnableWrite(_libRtmp);         // 4.
+        
+        if (RTMP_Connect(_libRtmp, NULL) == FALSE) {            //5.
+            std::cout << "RTMP_Connect() failed!"<< std::endl;
+            setClientState(kClientStateError);
+            return;
+        }
+        
+        if (RTMP_ConnectStream(_libRtmp,0) == FALSE) {       // 6.
+            std::cout << "RTMP_ConnectStream() failed!"<< std::endl;
+            setClientState(kClientStateError);
+            return;
+        }
+        this->sendMetaData(); //  
+        
     }
     RTMPSession::~RTMPSession()
     {
@@ -109,6 +163,62 @@ namespace videocore
         dispatch_release(m_networkWaitSemaphore);
 #endif
     }
+    
+    void RTMPSession::sendMetaData(){
+        RTMPPacket packet;
+        char pbuf[2048], *pend = pbuf + sizeof(pbuf);
+        
+        packet.m_nChannel = 0x03;
+        packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
+        packet.m_packetType = RTMP_PACKET_TYPE_INFO;
+        packet.m_nTimeStamp = 0;
+        packet.m_nInfoField2 = _libRtmp->m_stream_id;
+        packet.m_hasAbsTimestamp = TRUE;
+        packet.m_body = pbuf + RTMP_MAX_HEADER_SIZE;
+        
+        char *enc = packet.m_body;
+        enc = AMF_EncodeString(enc, pend, &av_setDataFrame);
+        enc = AMF_EncodeString(enc, pend, &av_onMetaData);
+        
+        *enc++ = AMF_OBJECT;
+        
+        enc = AMF_EncodeNamedNumber(enc, pend, &av_duration, 0.0);
+        enc = AMF_EncodeNamedNumber(enc, pend, &av_fileSize, 0.0);
+        
+        // how to get the real height and width .
+        
+        enc = AMF_EncodeNamedNumber(enc, pend, &av_width, 540);
+        enc = AMF_EncodeNamedNumber(enc, pend, &av_height, 960);
+        
+        // video
+        enc = AMF_EncodeNamedString(enc, pend, &av_videocodecid, &av_avc1);
+        
+        enc = AMF_EncodeNamedNumber(enc, pend, &av_videodatarate, 1000.f);
+        enc = AMF_EncodeNamedNumber(enc, pend, &av_framerate, 25);
+        
+        // audio
+        enc = AMF_EncodeNamedString(enc, pend, &av_audiocodecid, &av_mp4a);
+        enc = AMF_EncodeNamedNumber(enc, pend, &av_audiodatarate, 64000);
+        
+        enc = AMF_EncodeNamedNumber(enc, pend, &av_audiosamplerate, 44100);
+        enc = AMF_EncodeNamedNumber(enc, pend, &av_audiosamplesize, 16.0);
+        enc = AMF_EncodeNamedBoolean(enc, pend, &av_stereo, 2);
+        
+        // sdk version
+        enc = AMF_EncodeNamedString(enc, pend, &av_encoder, &av_SDKVersion);
+        
+        *enc++ = 0;
+        *enc++ = 0;
+        *enc++ = AMF_OBJECT_END;
+        
+        
+        
+        packet.m_nBodySize = enc - packet.m_body;
+        if (!RTMP_SendPacket(_libRtmp, &packet, FALSE)) {
+            return;
+        }
+    }
+    
     void
     RTMPSession::connectServer() {
         // reset the stream buffer.

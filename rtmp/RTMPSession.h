@@ -92,6 +92,10 @@ namespace videocore
         void setBandwidthCallback(BandwidthCallback callback);
         
     private:
+        // zjc support librtmp
+        RTMP *_libRtmp;
+        void sendMetaData();
+    private:
         
         // Deprecate sendPacket
         void sendPacket(uint8_t* data, size_t size, RTMPChunk_0 metadata);
