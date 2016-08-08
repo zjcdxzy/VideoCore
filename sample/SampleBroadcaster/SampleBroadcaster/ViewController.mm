@@ -72,8 +72,9 @@
         case VCSessionStatePreviewStarted:
         case VCSessionStateEnded:
         case VCSessionStateError:
+            // rtmp://ossrs.net:1935/live...vhost...players/demo.1470637298666
             // rtmp://w.gslb.lecloud.com/live/2016080230000038j99
-            [_session startRtmpSessionWithURL:@"rtmp://w.gslb.lecloud.com/live" andStreamKey:@"2016080230000038j99"];
+            [_session startRtmpSessionWithURL:@"rtmp://ossrs.net:1935/live...vhost...players" andStreamKey:@"demo.1470637298666"];
             break;
         default:
             [_session endRtmpSession];

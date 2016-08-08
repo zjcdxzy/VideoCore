@@ -36,6 +36,7 @@
 #include <queue>
 #include <map>
 #include <chrono>
+#include <list>
 
 #include <videocore/system/JobQueue.hpp>
 #include <cstdlib>
@@ -95,12 +96,15 @@ namespace videocore
         
         bool pendingExistSendPacketThread;
         bool sendPacketThreadIsRunning;
+        
+        
     private:
         // zjc support librtmp
         RTMP *_libRtmp;
         pthread_mutex_t *mLock;
         pthread_t sendPacketThread;
         pthread_cond_t m_cond;
+        std::list<RTMPPacket *> pendingSendPacketsList;
         
         static void* sendPackageThreadFunc(void *arg);
         void sendMetaData();
@@ -109,39 +113,37 @@ namespace videocore
         // Deprecate sendPacket
         void sendPacket(uint8_t* data, size_t size, RTMPChunk_0 metadata);
         
-        
-        
-        void streamStatusChanged(StreamStatus_T status);
+//        void streamStatusChanged(StreamStatus_T status);
         void write(uint8_t* data, size_t size, std::chrono::steady_clock::time_point packetTime = std::chrono::steady_clock::now(), bool isKeyframe = false);
-        void dataReceived();
+//        void dataReceived();
         void setClientState(ClientState_t state);
-        void handshake();
-        void handshake0();
-        void handshake1();
-        void handshake2();
+//        void handshake();
+//        void handshake0();
+//        void handshake1();
+//        void handshake2();
         
-        void sendConnectPacket();
-        void sendReleaseStream();
-        void sendFCPublish();
-        void sendCreateStream();
-        void sendPublish();
-        void sendHeaderPacket();
-        void sendSetChunkSize(int32_t chunkSize);
-        void sendPong();
-        void sendDeleteStream();
-        void sendSetBufferTime(int milliseconds);
-        
-        void increaseBuffer(int64_t size);
-        int  reassembleBuffer(uint8_t *p, int msgSize, int packageSize);
-        int  tryReadOneMessage(uint8_t *msg, int msgsize, int from_offset);
-
-        bool parseCurrentData();
-        void handleInvoke(uint8_t* p);
-        bool handleMessage(uint8_t* p, uint8_t msgTypeId);
-        
-        std::string parseStatusCode(uint8_t *p);
-        int32_t amfPrimitiveObjectSize(uint8_t* p);
-        int32_t trackCommand(const std::string& cmd);
+//        void sendConnectPacket();
+//        void sendReleaseStream();
+//        void sendFCPublish();
+//        void sendCreateStream();
+//        void sendPublish();
+//        void sendHeaderPacket();
+//        void sendSetChunkSize(int32_t chunkSize);
+//        void sendPong();
+//        void sendDeleteStream();
+//        void sendSetBufferTime(int milliseconds);
+//        
+//        void increaseBuffer(int64_t size);
+//        int  reassembleBuffer(uint8_t *p, int msgSize, int packageSize);
+//        int  tryReadOneMessage(uint8_t *msg, int msgsize, int from_offset);
+//
+//        bool parseCurrentData();
+//        void handleInvoke(uint8_t* p);
+//        bool handleMessage(uint8_t* p, uint8_t msgTypeId);
+//        
+//        std::string parseStatusCode(uint8_t *p);
+//        int32_t amfPrimitiveObjectSize(uint8_t* p);
+//        int32_t trackCommand(const std::string& cmd);
     private:
         JobQueue            m_networkQueue;
         JobQueue            m_jobQueue;
@@ -192,7 +194,7 @@ namespace videocore
         double          m_audioSampleRate;
         bool            m_audioStereo;
         
-        ClientState_t  m_state;
+        ClientState_t   m_state;
       
         bool            m_clearing;
         bool            m_ending;
