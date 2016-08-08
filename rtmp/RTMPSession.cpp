@@ -144,24 +144,63 @@ namespace videocore
             setClientState(kClientStateError);
             return;
         }
-        this->sendMetaData(); //  
+        // send meta data info message
+        this->sendMetaData();
+        
+        
+        int set = 1;
+        mLock = (pthread_mutex_t *) malloc(sizeof(pthread_mutex_t));
+        pthread_mutex_init(mLock, NULL);
+        m_cond = PTHREAD_COND_INITIALIZER;
+        
+        setClientState(kClientStateSessionStarted);
+        
+        pthread_create(&sendPacketThread, NULL, sendPackageThreadFunc, (void *)this);
+        
         
     }
     RTMPSession::~RTMPSession()
     {
         DLog("~RTMPSession");
-        if(m_state == kClientStateConnected) {
-            sendDeleteStream();
+        
+        pendingExistSendPacketThread = true;
+        pthread_cond_signal(&m_cond);
+        pthread_cancel(sendPacketThread);
+        pthread_join(sendPacketThread, NULL);
+
+        RTMP_Close(_libRtmp);    // 9.  RTMP_Close
+        RTMP_Free(_libRtmp);     // 10. RTMP_Free
+        _libRtmp = NULL;
+        setClientState(kClientStateNone);
+        
+//        RTMPPacket *packet = NULL;
+//        if (pendingSendPacketsList.size() > 0) {
+//            packet = pendingSendPacketsList.front();
+//            pendingSendPacketsList.pop_front();
+//            free(packet);
+//        }
+        
+        if (mLock) {
+            pthread_mutex_destroy(mLock);
+            mLock = NULL;
         }
         
-        m_ending = true;
-        m_jobQueue.mark_exiting();
-        m_jobQueue.enqueue_sync([]() {});
-        m_networkQueue.mark_exiting();
-        m_networkQueue.enqueue_sync([]() {});
-#ifdef __APPLE__
-        dispatch_release(m_networkWaitSemaphore);
-#endif
+        pthread_cond_destroy(&m_cond);
+
+        
+        
+//        if(m_state == kClientStateConnected) {
+//            sendDeleteStream();
+//        }
+//        
+//        m_ending = true;
+//        m_jobQueue.mark_exiting();
+//        m_jobQueue.enqueue_sync([]() {});
+//        m_networkQueue.mark_exiting();
+//        m_networkQueue.enqueue_sync([]() {});
+//#ifdef __APPLE__
+//        dispatch_release(m_networkWaitSemaphore);
+//#endif
     }
     
     void RTMPSession::sendMetaData(){
@@ -218,6 +257,12 @@ namespace videocore
             return;
         }
     }
+    
+    void* RTMPSession::sendPackageThreadFunc(void *arg) {
+        RTMPSession *session = (RTMPSession *)arg;
+        
+    }
+    
     
     void
     RTMPSession::connectServer() {

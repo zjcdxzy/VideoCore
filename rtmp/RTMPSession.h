@@ -91,9 +91,18 @@ namespace videocore
         void setSessionParameters(IMetadata& parameters);
         void setBandwidthCallback(BandwidthCallback callback);
         
+    public:
+        
+        bool pendingExistSendPacketThread;
+        bool sendPacketThreadIsRunning;
     private:
         // zjc support librtmp
         RTMP *_libRtmp;
+        pthread_mutex_t *mLock;
+        pthread_t sendPacketThread;
+        pthread_cond_t m_cond;
+        
+        static void* sendPackageThreadFunc(void *arg);
         void sendMetaData();
     private:
         
