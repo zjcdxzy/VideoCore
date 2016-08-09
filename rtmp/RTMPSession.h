@@ -36,7 +36,7 @@
 #include <queue>
 #include <map>
 #include <chrono>
-
+#include <list>
 #include <videocore/system/JobQueue.hpp>
 #include <cstdlib>
 
@@ -44,6 +44,9 @@
 #include <videocore/system/Buffer.hpp>
 #include <videocore/system/PreBuffer.hpp>
 #include <videocore/transforms/IOutputSession.hpp>
+
+#include <rtmp.h>
+#include <error.h>
 
 namespace videocore
 {
@@ -79,6 +82,8 @@ namespace videocore
         RTMPSession(std::string uri, RTMPSessionStateCallback callback);
         ~RTMPSession();
         
+        bool pendingExistSendPacketThread;
+        bool sendPacketThreadIsRunning;
         void connectServer();
     public:
         
@@ -87,6 +92,21 @@ namespace videocore
         
         void setSessionParameters(IMetadata& parameters);
         void setBandwidthCallback(BandwidthCallback callback);
+        std::list<PILI_RTMPPacket *> pendingSendPacketsList;
+        
+    private:
+        PILI_RTMP *_rtmp;
+        RTMPError  m_rtmp_error;
+        pthread_mutex_t *mLock;
+        
+        pthread_t sendPacketThread;
+        pthread_cond_t m_cond;
+        
+        
+        void sendMetaData();
+        static void* sendPackageThreadFunc(void *arg);
+        static void RTMPErrorCallback(RTMPError *error, void *userData);
+        static void ConnectionTimeCallback(PILI_CONNECTION_TIME *conn_time, void *userData);
         
     private:
         
