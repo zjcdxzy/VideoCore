@@ -93,44 +93,46 @@ namespace videocore
     , m_previousTs(0)
     , m_clearing(false)
     {
-        m_previousChunk.msg_length.data = 0;
-        m_previousChunk.msg_stream_id = 0;
-        m_previousChunk.msg_type_id = 0;
-#ifdef __APPLE__
-        m_streamSession.reset(new Apple::StreamSession());
-        m_networkWaitSemaphore = dispatch_semaphore_create(0);
-#endif
-        boost::char_separator<char> sep("/");
-        boost::tokenizer<boost::char_separator<char>> uri_tokens(uri, sep);
-        
-        // http::ParseHttpUrl is destructive to the parameter passed in.
-        std::string uri_cpy(uri);
-        m_uri = http::ParseHttpUrl(uri_cpy);
-        boost::tokenizer<boost::char_separator<char> > tokens(m_uri.path, sep );
-        
-        
-        int tokenCount = 0;
-        std::stringstream pp;
-        for ( auto it = uri_tokens.begin() ; it != uri_tokens.end() ; ++it) {
-            if(tokenCount++ < 2) { // skip protocol and host/port
-                continue;
-            }
-            if(tokenCount == 3) {
-                m_app = *it;
-            } else {
-                pp << *it << "/";
-            }
-        }
-        m_playPath = pp.str();
-        m_playPath.pop_back();
+//        m_previousChunk.msg_length.data = 0;
+//        m_previousChunk.msg_stream_id = 0;
+//        m_previousChunk.msg_type_id = 0;
+//#ifdef __APPLE__
+//        m_streamSession.reset(new Apple::StreamSession());
+//        m_networkWaitSemaphore = dispatch_semaphore_create(0);
+//#endif
+//        boost::char_separator<char> sep("/");
+//        boost::tokenizer<boost::char_separator<char>> uri_tokens(uri, sep);
+//        
+//        // http::ParseHttpUrl is destructive to the parameter passed in.
+//        std::string uri_cpy(uri);
+//        m_uri = http::ParseHttpUrl(uri_cpy);
+//        boost::tokenizer<boost::char_separator<char> > tokens(m_uri.path, sep );
+//        
+//        
+//        int tokenCount = 0;
+//        std::stringstream pp;
+//        for ( auto it = uri_tokens.begin() ; it != uri_tokens.end() ; ++it) {
+//            if(tokenCount++ < 2) { // skip protocol and host/port
+//                continue;
+//            }
+//            if(tokenCount == 3) {
+//                m_app = *it;
+//            } else {
+//                pp << *it << "/";
+//            }
+//        }
+//        m_playPath = pp.str();
+//        m_playPath.pop_back();
         
         // 保留 connectServer
         
         _rtmp = PILI_RTMP_Alloc();
         PILI_RTMP_Init(_rtmp);
         
-        if (PILI_RTMP_SetupURL(_rtmp, uri.c_str(), &m_rtmp_error)) {
-            
+        if (PILI_RTMP_SetupURL(_rtmp, uri.c_str(), &m_rtmp_error) == FALSE) {
+            std::cout << "RTMP_SetURL() failed!"<< std::endl;
+            setClientState(kClientStateNone);
+            return;
         }
         
         _rtmp->m_errorCallback = RTMPErrorCallback;
@@ -142,11 +144,15 @@ namespace videocore
         PILI_RTMP_EnableWrite(_rtmp);
         
         if (PILI_RTMP_Connect(_rtmp, NULL, &m_rtmp_error) == FALSE) {
-            // failed
+            std::cout << "RTMP_Connect() failed!"<< std::endl;
+            setClientState(kClientStateError);
+            return;
         }
         
         if (PILI_RTMP_ConnectStream(_rtmp, 0, &m_rtmp_error) == FALSE) {
-            
+            std::cout << "RTMP_ConnectStream() failed!"<< std::endl;
+            setClientState(kClientStateError);
+            return;
         }
         
         
@@ -321,22 +327,22 @@ namespace videocore
         
         // how to get the real height and width .
         
-        enc = AMF_EncodeNamedNumber(enc, pend, &av_width, 540);
-        enc = AMF_EncodeNamedNumber(enc, pend, &av_height, 960);
+        enc = AMF_EncodeNamedNumber(enc, pend, &av_width, m_frameWidth);
+        enc = AMF_EncodeNamedNumber(enc, pend, &av_height, m_frameHeight);
         
         // video
         enc = AMF_EncodeNamedString(enc, pend, &av_videocodecid, &av_avc1);
         
-        enc = AMF_EncodeNamedNumber(enc, pend, &av_videodatarate, 1000.f);
+        enc = AMF_EncodeNamedNumber(enc, pend, &av_videodatarate, m_bitrate);
         enc = AMF_EncodeNamedNumber(enc, pend, &av_framerate, 25);
         
         // audio
         enc = AMF_EncodeNamedString(enc, pend, &av_audiocodecid, &av_mp4a);
         enc = AMF_EncodeNamedNumber(enc, pend, &av_audiodatarate, 64000);
         
-        enc = AMF_EncodeNamedNumber(enc, pend, &av_audiosamplerate, 44100);
+        enc = AMF_EncodeNamedNumber(enc, pend, &av_audiosamplerate, m_audioSampleRate);
         enc = AMF_EncodeNamedNumber(enc, pend, &av_audiosamplesize, 16.0);
-        enc = AMF_EncodeNamedBoolean(enc, pend, &av_stereo, 2);
+        enc = AMF_EncodeNamedBoolean(enc, pend, &av_stereo, m_audioStereo);
         
         // sdk version
         enc = AMF_EncodeNamedString(enc, pend, &av_encoder, &av_SDKVersion);
