@@ -37,6 +37,8 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <sstream>
+#include <signal.h>
+#include <sys/socket.h>
 
 #define kMaxFrameNumber     100
 
@@ -124,6 +126,7 @@ namespace videocore
 //        connectServer();
         
         /*libRTMP Support */
+        setClientState(kClientStateConnected);
         _libRtmp = RTMP_Alloc();            // 1. RTMP_Alloc
         RTMP_Init(_libRtmp);                // 2. RTMP_Init
         
@@ -147,16 +150,19 @@ namespace videocore
             return;
         }
         
+        
+        /*解决系统发送sigpipe信号的问题
+         http://www.th7.cn/Program/IOS/201607/890715.shtml
+         */
+        
         int set = 1;
+        setsockopt(_libRtmp->m_sb.sb_socket , SOL_SOCKET, SO_NOSIGPIPE, (void *)&set, sizeof(int));
+        
         mLock = (pthread_mutex_t *) malloc(sizeof(pthread_mutex_t));
         pthread_mutex_init(mLock, NULL);
         m_cond = PTHREAD_COND_INITIALIZER;
-        
         setClientState(kClientStateSessionStarted);
-        
         pthread_create(&sendPacketThread, NULL, sendPackageThreadFunc, (void *)this);
-        
-
         
     }
     RTMPSession::~RTMPSession()
